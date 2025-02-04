@@ -89,7 +89,6 @@ export default function LogSymptomScreen() {
       alert('An error occurred while logging the symptom. Please try again.');
     }
   };
-  console.log(selectedSymptomType)
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Log Symptom</Text>

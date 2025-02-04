@@ -22,7 +22,6 @@ export default function SymptomsScreen() {
 
         const symptomsRef = collection(fb_db, 'Symptoms'); 
         const q = query(symptomsRef, where('userId', '==', user.uid));
-        console.log(user.uid)
         const querySnapshot = await getDocs(q);
 
         const symptomsData = querySnapshot.docs.map((doc) => ({

@@ -23,7 +23,6 @@ export default function MedicationsScreen() {
 
         const medicationsRef = collection(fb_db, 'Medications'); 
         const q = query(medicationsRef, where('userId', '==', user.uid)); 
-        console.log(user.uid)
         const querySnapshot = await getDocs(q);
 
         const medicationsData = querySnapshot.docs.map((doc) => ({

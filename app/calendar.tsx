@@ -19,7 +19,6 @@ export default function CalendarScreen() {
       <Calendar
         current={currentDate}
         onDayPress={(day) => {
-          console.log('Selected day', day);
           router.push({
             pathname: '/(tabs)',
             params: { selectedDate: day.dateString },
