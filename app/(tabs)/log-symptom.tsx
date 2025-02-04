@@ -107,7 +107,6 @@ export default function LogSymptomScreen() {
         placeholder={{ label: 'Select a symptom', value: null }}
         style={pickerSelectStyles}
       />
-
       {selectedSymptomType && (
         <>
           <Text style={styles.label}>Value:</Text>
@@ -147,7 +146,7 @@ export default function LogSymptomScreen() {
             </View>
           )}
 
-          {selectedSymptomType === 'Count' && (
+          {selectedSymptomType === 'Daily Count' && (
             <TextInput
               style={styles.input}
               keyboardType="numeric"
