@@ -3,11 +3,13 @@ import { Box, Input, Button, Text, Select, SelectTrigger, SelectContent, SelectI
 import { collection, addDoc } from 'firebase/firestore';
 import { fb_db, fb_auth } from '../firebaseConfig'; 
 import { useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function AddSymptomScreen() {
   const [name, setName] = useState('');
   const [type, setType] = useState(''); 
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const handleSave = async () => {
     if (!name || !type) {
@@ -32,6 +34,7 @@ export default function AddSymptomScreen() {
       await addDoc(symptomsRef, newSymptom);
 
       alert('Symptom added successfully!');
+      queryClient.invalidateQueries({queryKey: ["stored_symptoms"]});
       router.back(); 
     } catch (error) {
       console.error('Error adding symptom:', error);

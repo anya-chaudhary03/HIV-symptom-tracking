@@ -4,6 +4,7 @@ import { useRouter  } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { fb_db, fb_auth } from '../firebaseConfig'; 
 import { collection, query, where, getDocs } from 'firebase/firestore';
+import { useQuery } from '@tanstack/react-query';
 
 export default function SymptomsScreen() {
   const router = useRouter();
@@ -11,7 +12,7 @@ export default function SymptomsScreen() {
   const [loading, setLoading] = useState(true);
 
 
-  useEffect(() => {
+
     const fetchSymptoms = async () => {
       try {
         const user = fb_auth.currentUser;
@@ -29,6 +30,7 @@ export default function SymptomsScreen() {
           ...doc.data(),
         }));
 
+        return symptomsData
         setSymptoms(symptomsData);
       } catch (error) {
         console.error('Error fetching symptoms:', error);
@@ -37,8 +39,20 @@ export default function SymptomsScreen() {
       }
     };
 
-    fetchSymptoms();
-  }, []);
+
+  const { data, isPending, error } = useQuery({
+    queryKey: ["stored_symptoms"],
+    queryFn: () => {
+      return fetchSymptoms();
+    },
+    refetchOnMount: true,
+  });
+  
+   useEffect(() => {
+      if(data) {
+        setSymptoms(data);
+      }
+    }, [data]);
 
   if (loading) {
     return (
@@ -64,8 +78,7 @@ export default function SymptomsScreen() {
         )}
         ListEmptyComponent={<Text style={styles.emptyText}>No symptoms found</Text>}
       />
-
-      {/* Add New Symptom Button */}
+      
       <TouchableOpacity
         style={styles.addButton}
         onPress={() => router.push( '/add-symptom')}

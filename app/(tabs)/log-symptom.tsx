@@ -4,6 +4,7 @@ import RNPickerSelect from 'react-native-picker-select';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { fb_db, fb_auth } from '../../firebaseConfig';
 import { collection, query, where, getDocs, addDoc } from 'firebase/firestore';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function LogSymptomScreen() {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -13,6 +14,7 @@ export default function LogSymptomScreen() {
   const [showPicker, setShowPicker] = useState(false);
   const [symptoms, setSymptoms] = useState([]);
   const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const fetchSymptoms = async () => {
@@ -84,10 +86,13 @@ export default function LogSymptomScreen() {
       await addDoc(logsRef, logData);
 
       alert('Symptom logged successfully!');
+      queryClient.invalidateQueries({queryKey: ["symptoms"]});
     } catch (error) {
       console.error('Error logging symptom:', error);
       alert('An error occurred while logging the symptom. Please try again.');
     }
+
+    
   };
   return (
     <View style={styles.container}>
@@ -149,7 +154,6 @@ export default function LogSymptomScreen() {
           {selectedSymptomType === 'Daily Count' && (
             <TextInput
               style={styles.input}
-              keyboardType="numeric"
               placeholder="Enter a number"
               value={selectedValue}
               onChangeText={(text) => setSelectedValue(text)}

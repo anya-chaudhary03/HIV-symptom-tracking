@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { fb_db, fb_auth } from '../firebaseConfig'; 
 import { collection, query, where, getDocs } from 'firebase/firestore';
+import { useQuery } from '@tanstack/react-query'
 
 export default function MedicationsScreen() {
   const router = useRouter();
@@ -12,7 +13,7 @@ export default function MedicationsScreen() {
   const [loading, setLoading] = useState(true);
 
   
-  useEffect(() => {
+
     const fetchMedications = async () => {
       try {
         const user = fb_auth.currentUser; 
@@ -29,8 +30,9 @@ export default function MedicationsScreen() {
           id: doc.id, 
           ...doc.data(),
         }));
+        return medicationsData
 
-        setMedications(medicationsData);
+        //setMedications(medicationsData);
       } catch (error) {
         console.error('Error fetching medications:', error);
       } finally {
@@ -38,8 +40,20 @@ export default function MedicationsScreen() {
       }
     };
 
-    fetchMedications();
-  }, []);
+
+    const { data, isPending, error } = useQuery({
+      queryKey: ["medications"],
+      queryFn: () => {
+        return fetchMedications();
+      },
+      refetchOnMount: true,
+    });
+    
+     useEffect(() => {
+        if(data) {
+          setMedications(data);
+        }
+      }, [data]);
 
   return (
     <View style={styles.container}>

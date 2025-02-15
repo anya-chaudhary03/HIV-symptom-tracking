@@ -1,52 +1,109 @@
 import React, { useState, useEffect } from 'react';
-import { ScrollView, Text, Dimensions, View } from 'react-native';
+import { ScrollView, Text, Dimensions, View, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
-import { fb_db, fb_auth } from '../../firebaseConfig'; 
+import { fb_db, fb_auth } from '../../firebaseConfig';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 
-const useSymptomsData = () => {
+const useSymptomsData = (range, setLoading) => {
   const [symptoms, setSymptoms] = useState([]);
   const [logs, setLogs] = useState([]);
-  const userId = fb_auth.currentUser?.uid; 
 
   useEffect(() => {
-    if (!userId) return;
-
     const fetchSymptoms = async () => {
-      const symptomSnapshot = await fb_db
-        .collection('Symptoms')
-        .where('userId', '==', userId)
-        .get();
-      setSymptoms(symptomSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      try {
+        setLoading(true);
+        const user = fb_auth.currentUser;
+        if (!user) return;
+
+        const symptomsRef = collection(fb_db, 'Symptoms');
+        const q = query(symptomsRef, where('userId', '==', user.uid));
+        const querySnapshot = await getDocs(q);
+
+        const symptomsData = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+
+        setSymptoms(symptomsData);
+      } catch (error) {
+        console.error('Error fetching symptoms:', error);
+      }
     };
 
     const fetchLogs = async () => {
-      const logSnapshot = await fb_db
-        .collection('Log')
-        .where('userId', '==', userId)
-        .get();
-      setLogs(logSnapshot.docs.map(doc => doc.data()));
+      try {
+        const user = fb_auth.currentUser;
+        if (!user) return;
+
+        const logsRef = collection(fb_db, 'Log');
+        const q = query(logsRef, where('userId', '==', user.uid));
+        const querySnapshot = await getDocs(q);
+
+        let logsData = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+
+        logsData = filterLogsByRange(logsData, range);
+        setLogs(logsData);
+      } catch (error) {
+        console.error('Error fetching logs:', error);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchSymptoms();
     fetchLogs();
-  }, [userId]);
+  }, [range]);
 
   return { symptoms, logs };
 };
 
-const SymptomChart = ({ symptom, logs }) => {
-  const symptomLogs = logs.filter(log => log.symptom === symptom.name);
+const filterLogsByRange = (logs, range) => {
+  const now = new Date();
+  let startDate = new Date(now);
 
-  if (symptomLogs.length === 0) {
-    return null;
+  if (range === 'week') {
+    startDate.setDate(now.getDate() - 7);
+  } else if (range === 'month') {
+    startDate.setMonth(now.getMonth() - 1);
+  } else if (range === '3months') {
+    startDate.setMonth(now.getMonth() - 3);
   }
 
-  const dates = symptomLogs.map(log => log.date.split('-').slice(1).join('/')); 
-  const values = symptomLogs.map(log =>
-    symptom.type === 'Severity'
-      ? ['Low', 'Moderate', 'High'].indexOf(log.value) + 1
-      : parseInt(log.value, 10)
-  );
+  return logs.filter((log) => new Date(log.date) >= startDate);
+};
+
+const SymptomChart = ({ symptom, logs }) => {
+  const symptomLogs = logs.filter((log) => log.symptom === symptom.name);
+
+  if (symptomLogs.length === 0) {
+    return null; 
+  }
+
+  const aggregatedData = symptomLogs.reduce((acc, log) => {
+    const formattedDate = log.date;
+    const value =
+      symptom.type === 'Severity'
+        ? ['Low', 'Moderate', 'High'].indexOf(log.value) + 1
+        : parseInt(log.value, 10);
+
+    if (acc[formattedDate]) {
+      acc[formattedDate].push(value);
+    } else {
+      acc[formattedDate] = [value];
+    }
+
+    return acc;
+  }, {});
+
+  const sortedDates = Object.keys(aggregatedData).sort((a, b) => new Date(a) - new Date(b));
+  const dates = sortedDates.map((date) => date.split('-').slice(1).join('/'));
+  const values = sortedDates.map((date) => {
+    const dateValues = aggregatedData[date];
+    return dateValues.reduce((sum, val) => sum + val, 0) / dateValues.length;
+  });
 
   return (
     <LineChart
@@ -56,15 +113,23 @@ const SymptomChart = ({ symptom, logs }) => {
       }}
       width={Dimensions.get('window').width - 20}
       height={220}
-      yAxisLabel={symptom.type === 'DailyScale' ? '' : undefined}
+      yAxisLabel={''}
+      yAxisSuffix={symptom.type === 'Daily Count' ? '' : ''}
+      yAxisInterval={1}
       chartConfig={{
-        backgroundColor: '#e26a00',
-        backgroundGradientFrom: '#fb8c00',
-        backgroundGradientTo: '#ffa726',
+        backgroundColor: '#007BFF',
+        backgroundGradientFrom: '#0056b3',
+        backgroundGradientTo: '#007BFF',
         decimalPlaces: 0,
         color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
         labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+        propsForDots: {
+          r: '6',
+          strokeWidth: '2',
+          stroke: '#ffffff',
+        },
       }}
+      fromZero={true}
       style={{
         marginVertical: 10,
         borderRadius: 16,
@@ -74,22 +139,75 @@ const SymptomChart = ({ symptom, logs }) => {
 };
 
 const SymptomCharts = () => {
-  const { symptoms, logs } = useSymptomsData();
-
-  if (!symptoms || symptoms.length === 0) {
-    return <Text style={{ textAlign: 'center', marginTop: 20 }}>No symptoms found. Add some to get started!</Text>;
-  }
+  const [range, setRange] = useState('week');
+  const [loading, setLoading] = useState(false);
+  const { symptoms, logs } = useSymptomsData(range, setLoading);
 
   return (
-    <ScrollView style={{ padding: 10 }}>
-      {symptoms.map(symptom => (
-        <View key={symptom.id} style={{ marginBottom: 20 }}>
-          <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>{symptom.name}</Text>
-          <SymptomChart symptom={symptom} logs={logs} />
+    <View style={{ flex: 1, padding: 10 }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-evenly', marginBottom: 20 }}>
+        <TouchableOpacity
+          onPress={() => setRange('week')}
+          style={[styles.filterButton, range === 'week' && styles.activeFilter]}
+        >
+          <Text style={range === 'week' ? styles.activeFilterText : styles.filterText}>Last Week</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => setRange('month')}
+          style={[styles.filterButton, range === 'month' && styles.activeFilter]}
+        >
+          <Text style={range === 'month' ? styles.activeFilterText : styles.filterText}>Last Month</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => setRange('3months')}
+          style={[styles.filterButton, range === '3months' && styles.activeFilter]}
+        >
+          <Text style={range === '3months' ? styles.activeFilterText : styles.filterText}>Last 3 Months</Text>
+        </TouchableOpacity>
+      </View>
+
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#007BFF" />
+          <Text>Loading charts...</Text>
         </View>
-      ))}
-    </ScrollView>
+      ) : (
+        <ScrollView>
+          {symptoms
+            .filter((symptom) => logs.some((log) => log.symptom === symptom.name))
+            .map((symptom) => (
+              <View key={symptom.id} style={{ marginBottom: 20 }}>
+                <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>{symptom.name}</Text>
+                <SymptomChart symptom={symptom} logs={logs} />
+              </View>
+            ))}
+        </ScrollView>
+      )}
+    </View>
   );
+};
+
+const styles = {
+  filterButton: {
+    padding: 10,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+  },
+  activeFilter: {
+    backgroundColor: '#007BFF',
+  },
+  filterText: {
+    color: '#000',
+  },
+  activeFilterText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 20,
+  },
 };
 
 const App = () => {

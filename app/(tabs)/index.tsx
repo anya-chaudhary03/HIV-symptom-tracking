@@ -1,14 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, FlatList, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Text, FlatList, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { fb_db, fb_auth } from '../../firebaseConfig';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import { MaterialIcons } from '@expo/vector-icons';
+import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 
-export default function IndexPage() {
+export default IndexPage;
+
+export function IndexPage() {
+  
+
+  return  <IndexElement />
+  
+}
+
+export function IndexElement() {
   const { selectedDate } = useLocalSearchParams();
   const [symptoms, setSymptoms] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [editingSymptom, setEditingSymptom] = useState(null);
 
   const formatDate = (date) => {
     const d = new Date(date);
@@ -17,76 +27,101 @@ export default function IndexPage() {
 
   const currentDate = selectedDate || formatDate(new Date());
 
-  useEffect(() => {
-    const fetchSymptoms = async () => {
-      setLoading(true);
-      try {
-        const user = fb_auth.currentUser;
-        if (!user) {
-          console.error('No logged-in user found');
-          return;
-        }
-        const logsRef = collection(fb_db, 'Log');
-        const q = query(
-          logsRef,
-          where('userId', '==', user.uid),
-          where('date', '==', currentDate) 
-        );
-        const querySnapshot = await getDocs(q);
-
-        const logsData = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-
-        setSymptoms(logsData);
-      } catch (error) {
-        console.error('Error fetching logs:', error);
-        Alert.alert('Error', 'Failed to fetch symptoms. Please try again later.');
-      } finally {
-        setLoading(false);
+  const fetchSymptoms = async () => {
+    setLoading(true);
+    try {
+      const user = fb_auth.currentUser;
+      if (!user) {
+        console.error('No logged-in user found');
+        return;
       }
-    };
+      const logsRef = collection(fb_db, 'Log');
+      const q = query(
+        logsRef,
+        where('userId', '==', user.uid),
+        where('date', '==', currentDate)
+      );
+      const querySnapshot = await getDocs(q);
 
-    fetchSymptoms();
-  }, [currentDate]);
+      const logsData = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
 
-  const deleteSymptom = (id) => {
-    Alert.alert('Delete Symptom', 'Are you sure you want to delete this symptom?', [
+      return logsData
+    } catch (error) {
+      console.error('Error fetching logs:', error);
+      Alert.alert('Error', 'Failed to fetch symptoms. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const {data,isPending,error} = useQuery({
+    queryKey: ["symptoms",selectedDate],
+    queryFn: () => {
+      return fetchSymptoms()
+    },
+    refetchOnMount: true,
+  });
+
+  useEffect(() => {
+    if(data) {
+      setSymptoms(data);
+    }
+  }, [data]);
+
+  const deleteSymptom = async (id) => {
+    Alert.alert('Delete Symptom', 'Are you sure you want to remove this entry?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
         style: 'destructive',
-        onPress: () => {
-          const updatedSymptoms = symptoms.filter((symptom) => symptom.id !== id);
-          setSymptoms(updatedSymptoms);
+        onPress: async () => {
+          try {
+            const symptomRef = doc(fb_db, 'Log', id);
+            await deleteDoc(symptomRef);
+
+            const updatedSymptoms = symptoms.filter((symptom) => symptom.id !== id);
+            setSymptoms(updatedSymptoms);
+
+            Alert.alert('Success', 'Symptom deleted successfully.');
+          } catch (error) {
+            console.error('Error deleting symptom:', error);
+            Alert.alert('Error', 'Failed to delete the symptom. Please try again later.');
+          }
         },
       },
     ]);
   };
 
-  const saveEditedSymptom = () => {
-    const updatedSymptoms = symptoms.map((symptom) => {
-      if (symptom.id === editingSymptom.id) {
-        return editingSymptom;
-      }
-      return symptom;
-    });
-
-    setSymptoms(updatedSymptoms);
-    setEditingSymptom(null); 
+  const renderDailyScale = (value) => {
+    const max = 10;
+    return (
+      <View style={styles.scaleContainer}>
+        {Array.from({ length: max }).map((_, index) => (
+          <View
+            key={index}
+            style={[
+              styles.scaleDot,
+              index < value ? styles.filledDot : styles.emptyDot,
+            ]}
+          />
+        ))}
+      </View>
+    );
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.header}>
-        {selectedDate ? `Selected Date: ${selectedDate}` : `Today: ${currentDate}`}
+        {selectedDate ? `Records for ${selectedDate}` : `Today's Records: ${currentDate}`}
       </Text>
 
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3b83db" />
-          <Text>Loading symptoms...</Text>
+          <ActivityIndicator size="large" color="#007BFF" />
+          <Text>Loading records...</Text>
         </View>
       ) : symptoms.length > 0 ? (
         <FlatList
@@ -94,59 +129,22 @@ export default function IndexPage() {
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <View style={styles.card}>
-              {editingSymptom && editingSymptom.id === item.id ? (
-                <View>
-                  <TextInput
-                    style={styles.input}
-                    value={editingSymptom.value.toString()}
-                    onChangeText={(text) =>
-                      setEditingSymptom({
-                        ...editingSymptom,
-                        value: text,
-                      })
-                    }
-                  />
-                  <TextInput
-                    style={styles.input}
-                    value={editingSymptom.unit}
-                    onChangeText={(text) =>
-                      setEditingSymptom({
-                        ...editingSymptom,
-                        unit: text,
-                      })
-                    }
-                  />
-                  <TouchableOpacity style={styles.saveButton} onPress={saveEditedSymptom}>
-                    <Text style={styles.saveButtonText}>Save</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <View>
-                  <Text style={styles.cardTitle}>{item.symptom}</Text>
-                  <Text style={styles.cardSubtitle}>
-                    Value: {item.value} {item.unit}
-                  </Text>
-                  <View style={styles.actions}>
-                    <TouchableOpacity
-                      style={styles.editButton}
-                      onPress={() => setEditingSymptom(item)}
-                    >
-                      <Text style={styles.actionText}>Edit</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.deleteButton}
-                      onPress={() => deleteSymptom(item.id)}
-                    >
-                      <Text style={styles.actionText}>Delete</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              )}
+              <View style={styles.cardContent}>
+                <Text style={styles.symptomName}>{item.symptom}</Text>
+                {item.type === 'Severity' ? (
+                  renderDailyScale(parseInt(item.value, 10))
+                ) : (
+                  <Text style={styles.symptomValue}>{item.value} {item.unit}</Text>
+                )}
+              </View>
+              <TouchableOpacity onPress={() => deleteSymptom(item.id)} style={styles.deleteButton}>
+                <MaterialIcons name="delete" size={22} color="white" />
+              </TouchableOpacity>
             </View>
           )}
         />
       ) : (
-        <Text>No symptoms logged for this date.</Text>
+        <Text style={styles.noDataText}>No records found for this date.</Text>
       )}
     </View>
   );
@@ -156,65 +154,73 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#fff',
+    backgroundColor: '#F8F9FA',
   },
   header: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
     marginBottom: 20,
     textAlign: 'center',
+    color: '#2E3A59',
   },
   card: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#FFFFFF',
     padding: 15,
-    borderRadius: 10,
-    marginBottom: 10,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  cardSubtitle: {
-    fontSize: 14,
-    color: '#555',
-    marginBottom: 10,
-  },
-  actions: {
+    borderRadius: 12,
+    marginBottom: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  editButton: {
-    backgroundColor: '#007BFF',
-    padding: 5,
-    borderRadius: 5,
-    marginRight: 10,
+  cardContent: {
+    flexDirection: 'column',
+  },
+  symptomName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2E3A59',
+  },
+  symptomValue: {
+    fontSize: 16,
+    color: '#007BFF',
+    fontWeight: '600',
+    marginTop: 3,
   },
   deleteButton: {
     backgroundColor: '#FF5252',
-    padding: 5,
-    borderRadius: 5,
-  },
-  actionText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 5,
-    padding: 10,
-    marginBottom: 10,
-    backgroundColor: '#fff',
-  },
-  saveButton: {
-    backgroundColor: '#28A745',
-    padding: 10,
-    borderRadius: 5,
+    padding: 8,
+    borderRadius: 50,
+    justifyContent: 'center',
     alignItems: 'center',
+    width: 35,
+    height: 35,
   },
-  saveButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
+  scaleContainer: {
+    flexDirection: 'row',
+    marginTop: 5,
+  },
+  scaleDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: 5,
+  },
+  filledDot: {
+    backgroundColor: '#007BFF',
+  },
+  emptyDot: {
+    backgroundColor: '#D0D3D4',
+  },
+  noDataText: {
+    fontSize: 18,
+    textAlign: 'center',
+    color: '#6C757D',
+    marginTop: 20,
   },
   loadingContainer: {
     flex: 1,
@@ -222,3 +228,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 });
+

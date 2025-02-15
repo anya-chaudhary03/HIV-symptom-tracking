@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Box, Input, Button, Text } from '@gluestack-ui/themed';
-import { InputField } from '@gluestack-ui/themed';
+import { Box, Button, Input, InputField, Text } from '@gluestack-ui/themed';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import { fb_db, fb_auth } from '../firebaseConfig';
 import { addDoc, collection } from 'firebase/firestore';
+import { useQueryClient } from '@tanstack/react-query';
+import {  Select, SelectTrigger, SelectContent, SelectItem, SelectInput, SelectPortal, SelectBackdrop, SelectDragIndicatorWrapper, SelectDragIndicator } from '@gluestack-ui/themed';
 
 export default function AddMedicationScreen() {
   const [name, setName] = useState('');
@@ -13,11 +14,14 @@ export default function AddMedicationScreen() {
   const [unit, setUnit] = useState('');
   const [date, setDate] = useState(new Date());
   const [showPicker, setShowPicker] = useState(false);
+  const queryClient = useQueryClient();
+  const [IntakeInst, setIntakeInst] = useState('');
+  const [IntakeTime, setIntakeTime] = useState('');
 
   const router = useRouter();
 
   const handleSave = async () => {
-    if (!name || !dosage || !frequency || !unit || !date) {
+    if (!name || !dosage || !frequency || !unit || !date || !IntakeInst || !IntakeTime)  {
       alert('Please fill out all fields!');
       return;
     }
@@ -36,12 +40,15 @@ export default function AddMedicationScreen() {
         date: date.toISOString(),
         frequency,
         userId: user.uid,
+        IntakeInst,
+        IntakeTime
       };
 
       const medicationsRef = collection(fb_db, 'Medications');
       await addDoc(medicationsRef, newMedication);
 
       alert('Medication added successfully!');
+      queryClient.invalidateQueries({queryKey: ["medications"]});
       router.back();
     } catch (error) {
       console.error('Error adding medication:', error);
@@ -127,9 +134,63 @@ export default function AddMedicationScreen() {
         </Input>
       </Box>
 
+      
+    
+      <Box mb={8}>
+              <Text size="lg" fontWeight="semibold" mb={2} color="$gray700">
+                Instructions for use
+              </Text>
+              <Select
+                isInvalid={false}
+                isDisabled={false}
+                onValueChange={(value) => setIntakeInst(value)}
+              >
+                <SelectTrigger>
+                  <SelectInput placeholder="Select instructions" />
+                </SelectTrigger>
+                <SelectPortal>
+                  <SelectBackdrop />
+                  <SelectContent>
+                    <SelectDragIndicatorWrapper>
+                      <SelectDragIndicator />
+                    </SelectDragIndicatorWrapper>
+                    <SelectItem label="After meal" value="After meal" />
+                    <SelectItem label="Before meal" value="Before meal" />
+                    <SelectItem label="During meal" value="During meal" />
+                  </SelectContent>
+                </SelectPortal>
+              </Select>
+            </Box>
+
+            <Box mb={8}>
+              <Text size="lg" fontWeight="semibold" mb={2} color="$gray700">
+                Intake time
+              </Text>
+              <Select
+                isInvalid={false}
+                isDisabled={false}
+                onValueChange={(value) => setIntakeTime(value)}
+              >
+                <SelectTrigger>
+                  <SelectInput placeholder="Select intake time" />
+                </SelectTrigger>
+                <SelectPortal>
+                  <SelectBackdrop />
+                  <SelectContent>
+                    <SelectDragIndicatorWrapper>
+                      <SelectDragIndicator />
+                    </SelectDragIndicatorWrapper>
+                    <SelectItem label="Morning" value="Morning" />
+                    <SelectItem label="Afternoon" value="Afternoon" />
+                    <SelectItem label="Evening" value="Evening" />
+                  </SelectContent>
+                </SelectPortal>
+              </Select>
+            </Box>
+
       <Box alignItems="center">
         <Button
-          bg="$primary"
+          bg="$blue600"
           paddingX={6}
           paddingY={4}
           borderRadius="full"

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Tabs } from 'expo-router';
 import { TouchableOpacity, StyleSheet } from 'react-native';
@@ -6,11 +6,14 @@ import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  
 
   return (
+   
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
@@ -64,6 +67,7 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
+   
   );
 }
 

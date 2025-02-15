@@ -11,6 +11,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 import { GluestackUIProvider } from '@gluestack-ui/themed';
 import { config } from '@gluestack-ui/config';
 import { router } from 'expo-router';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -35,16 +36,20 @@ export default function RootLayout() {
   }
 
   return (
+    
     <GluestackUIProvider config={config}>
       <RootLayoutNav />
     </GluestackUIProvider>
   );
 }
 
+const queryClient = new QueryClient();
+
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
 
   return (
+    <QueryClientProvider client={queryClient}>
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack>
         <Stack.Screen
@@ -65,6 +70,8 @@ function RootLayoutNav() {
         />
       </Stack>
     </ThemeProvider>
+    </QueryClientProvider>
+    
   );
 }
 
