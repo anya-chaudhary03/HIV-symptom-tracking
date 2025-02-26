@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { View, StyleSheet, Text, TextInput, TouchableOpacity, Alert, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { fb_auth } from '../firebaseConfig';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { useRouter } from 'expo-router';
 import { LogBox } from 'react-native';
-
 
 //LogBox.ignoreAllLogs();
 
@@ -32,32 +31,34 @@ const LoginScreen = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{isSignup ? 'Sign Up' : 'Login'}</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
-      <TouchableOpacity style={styles.button} onPress={handleAuth}>
-        <Text style={styles.buttonText}>{isSignup ? 'Sign Up' : 'Login'}</Text>
-      </TouchableOpacity>
-      <TouchableOpacity onPress={() => setIsSignup(!isSignup)}>
-        <Text style={styles.toggleText}>
-          {isSignup ? 'Already have an account? Login' : "Don't have an account? Sign Up"}
-        </Text>
-      </TouchableOpacity>
-    </View>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <View style={styles.container}>
+        <Text style={styles.title}>{isSignup ? 'Sign Up' : 'Login'}</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Email"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Password"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+        />
+        <TouchableOpacity style={styles.button} onPress={handleAuth}>
+          <Text style={styles.buttonText}>{isSignup ? 'Sign Up' : 'Login'}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => setIsSignup(!isSignup)}>
+          <Text style={styles.toggleText}>
+            {isSignup ? 'Already have an account? Login' : "Don't have an account? Sign Up"}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </TouchableWithoutFeedback>
   );
 };
 

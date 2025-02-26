@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Alert } from 'react-native';
+import { View, StyleSheet, Alert, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { TextInput, Button, Text, Card, Menu, Divider, Provider, DefaultTheme } from 'react-native-paper';
 import { collection, addDoc } from 'firebase/firestore';
 import { fb_db, fb_auth } from '../firebaseConfig';
@@ -55,71 +55,73 @@ export default function AddSymptomScreen() {
 
   return (
     <Provider theme={theme}>
-      <View style={styles.container}>
-        <Card style={styles.card}>
-          <Card.Content>
-            <Text variant="headlineMedium" style={styles.title}>
-              Add a New Symptom
-            </Text>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <View style={styles.container}>
+          <Card style={styles.card}>
+            <Card.Content>
+              <Text variant="headlineMedium" style={styles.title}>
+                Add a New Symptom
+              </Text>
 
-            <TextInput
-              label="Symptom Name"
-              value={name}
-              onChangeText={(text) => setName(text)}
-              mode="outlined"
-              style={styles.input}
-              placeholder="Enter symptom name"
-            />
+              <TextInput
+                label="Symptom Name"
+                value={name}
+                onChangeText={(text) => setName(text)}
+                mode="outlined"
+                style={styles.input}
+                placeholder="Enter symptom name"
+              />
 
-            <Menu
-              visible={visible}
-              onDismiss={() => setVisible(false)}
-              anchor={
-                <Button
-                  mode="outlined"
-                  onPress={() => setVisible(true)}
-                  style={styles.dropdownButton}
-                >
-                  {type || 'Select Symptom Type'}
-                </Button>
-              }
-            >
-              <Menu.Item
-                onPress={() => {
-                  setType('Severity');
-                  setVisible(false);
-                }}
-                title="Severity e.g., Low, Medium, High"
-              />
-              <Divider />
-              <Menu.Item
-                onPress={() => {
-                  setType('Daily Scale');
-                  setVisible(false);
-                }}
-                title="Daily Scale e.g., 1-10"
-              />
-              <Divider />
-              <Menu.Item
-                onPress={() => {
-                  setType('Daily Count');
-                  setVisible(false);
-                }}
-                title="Daily Count e.g., 3"
-              />
-            </Menu>
+              <Menu
+                visible={visible}
+                onDismiss={() => setVisible(false)}
+                anchor={
+                  <Button
+                    mode="outlined"
+                    onPress={() => setVisible(true)}
+                    style={styles.dropdownButton}
+                  >
+                    {type || 'Select Symptom Type'}
+                  </Button>
+                }
+              >
+                <Menu.Item
+                  onPress={() => {
+                    setType('Severity');
+                    setVisible(false);
+                  }}
+                  title="Severity e.g., Low, Medium, High"
+                />
+                <Divider />
+                <Menu.Item
+                  onPress={() => {
+                    setType('Daily Scale');
+                    setVisible(false);
+                  }}
+                  title="Daily Scale e.g., 1-10"
+                />
+                <Divider />
+                <Menu.Item
+                  onPress={() => {
+                    setType('Daily Count');
+                    setVisible(false);
+                  }}
+                  title="Daily Count e.g., 3"
+                />
+              </Menu>
 
-            <Button
-              mode="contained"
-              onPress={handleSave}
-              style={styles.button}
-              labelStyle={styles.buttonLabel}
-            >
-              Save Symptom
-            </Button>
-          </Card.Content>
-        </Card>
-      </View>
+              <Button
+                mode="contained"
+                onPress={handleSave}
+                style={styles.button}
+                labelStyle={styles.buttonLabel}
+              >
+                Save Symptom
+              </Button>
+            </Card.Content>
+          </Card>
+        </View>
+      </TouchableWithoutFeedback>
     </Provider>
   );
 }

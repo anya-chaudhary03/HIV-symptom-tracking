@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Alert } from 'react-native';
+import { View, StyleSheet, Alert, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { TextInput, Button, Text, Card, Menu, Divider, Provider, DefaultTheme } from 'react-native-paper';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
@@ -75,155 +75,156 @@ export default function AddMedicationScreen() {
 
   return (
     <Provider theme={theme}>
-      <View style={styles.container}>
-        <Card style={styles.card}>
-          <Card.Content>
-            <Text variant="headlineMedium" style={styles.title}>
-              Add New Medication
-            </Text>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <View style={styles.container}>
+          <Card style={styles.card}>
+            <Card.Content>
+              <Text variant="headlineMedium" style={styles.title}>
+                Add New Medication
+              </Text>
 
-            <TextInput
-              label="Name"
-              value={name}
-              onChangeText={(text) => setName(text)}
-              mode="outlined"
-              style={styles.input}
-              placeholder="Enter medication name"
-            />
-
-            <Button
-              mode="outlined"
-              onPress={() => setShowPicker(true)}
-              style={styles.input}
-            >
-              {date.toDateString()}
-            </Button>
-            {showPicker && (
-              <DateTimePicker
-                value={date}
-                mode="date"
-                display="default"
-                onChange={handleDateChange}
+              <TextInput
+                label="Name"
+                value={name}
+                onChangeText={(text) => setName(text)}
+                mode="outlined"
+                style={styles.input}
+                placeholder="Enter medication name"
               />
-            )}
 
-            <TextInput
-              label="Dosage"
-              value={dosage}
-              onChangeText={(text) => setDosage(text)}
-              mode="outlined"
-              style={styles.input}
-              placeholder="Enter dosage (e.g., 500)"
-              keyboardType="numeric"
-            />
+              <Button
+                mode="outlined"
+                onPress={() => setShowPicker(true)}
+                style={styles.input}
+              >
+                {date.toDateString()}
+              </Button>
+              {showPicker && (
+                <DateTimePicker
+                  value={date}
+                  mode="date"
+                  display="default"
+                  onChange={handleDateChange}
+                />
+              )}
 
-            <TextInput
-              label="Unit"
-              value={unit}
-              onChangeText={(text) => setUnit(text)}
-              mode="outlined"
-              style={styles.input}
-              placeholder="Enter unit (e.g., mg, ml)"
-            />
-
-             <Menu
-              visible={menuVisible}
-              onDismiss={() => setMenuVisible(false)}
-              anchor={
-                <Button
-                  mode="outlined"
-                  onPress={() => setMenuVisible(true)}
-                  style={styles.input}
-                >
-                  {IntakeInst || 'Select instructions'}
-                </Button>
-              }
-            >
-              <Menu.Item
-                onPress={() => {
-                  setIntakeInst('After meal');
-                  setMenuVisible(false);
-                }}
-                title="After meal"
+              <TextInput
+                label="Dosage"
+                value={dosage}
+                onChangeText={(text) => setDosage(text)}
+                mode="outlined"
+                style={styles.input}
+                placeholder="Enter dosage (e.g., 500)"
+                keyboardType="numeric"
               />
-              <Divider />
-              <Menu.Item
-                onPress={() => {
-                  setIntakeInst('Before meal');
-                  setMenuVisible(false);
-                }}
-                title="Before meal"
-              />
-              <Divider />
-              <Menu.Item
-                onPress={() => {
-                  setIntakeInst('During meal');
-                  setMenuVisible(false);
-                }}
-                title="During meal"
-              />
-            </Menu>
 
-            <Menu
-              visible={timeMenuVisible}
-              onDismiss={() => setTimeMenuVisible(false)}
-              anchor={
-                <Button
-                  mode="outlined"
-                  onPress={() => setTimeMenuVisible(true)}
-                  style={styles.input}
-                >
-                  {IntakeTime || 'Select intake time'}
-                </Button>
-              }
-            >
-              <Menu.Item
-                onPress={() => {
-                  setIntakeTime('Morning');
-                  setTimeMenuVisible(false);
-                }}
-                title="Morning"
+              <TextInput
+                label="Unit"
+                value={unit}
+                onChangeText={(text) => setUnit(text)}
+                mode="outlined"
+                style={styles.input}
+                placeholder="Enter unit (e.g., mg, ml)"
               />
-              <Divider />
-              <Menu.Item
-                onPress={() => {
-                  setIntakeTime('Afternoon');
-                  setTimeMenuVisible(false);
-                }}
-                title="Afternoon"
+
+              <Menu
+                visible={menuVisible}
+                onDismiss={() => setMenuVisible(false)}
+                anchor={
+                  <Button
+                    mode="outlined"
+                    onPress={() => setMenuVisible(true)}
+                    style={styles.input}
+                  >
+                    {IntakeInst || 'Select instructions'}
+                  </Button>
+                }
+              >
+                <Menu.Item
+                  onPress={() => {
+                    setIntakeInst('After meal');
+                    setMenuVisible(false);
+                  }}
+                  title="After meal"
+                />
+                <Divider />
+                <Menu.Item
+                  onPress={() => {
+                    setIntakeInst('Before meal');
+                    setMenuVisible(false);
+                  }}
+                  title="Before meal"
+                />
+                <Divider />
+                <Menu.Item
+                  onPress={() => {
+                    setIntakeInst('During meal');
+                    setMenuVisible(false);
+                  }}
+                  title="During meal"
+                />
+              </Menu>
+
+              <Menu
+                visible={timeMenuVisible}
+                onDismiss={() => setTimeMenuVisible(false)}
+                anchor={
+                  <Button
+                    mode="outlined"
+                    onPress={() => setTimeMenuVisible(true)}
+                    style={styles.input}
+                  >
+                    {IntakeTime || 'Select intake time'}
+                  </Button>
+                }
+              >
+                <Menu.Item
+                  onPress={() => {
+                    setIntakeTime('Morning');
+                    setTimeMenuVisible(false);
+                  }}
+                  title="Morning"
+                />
+                <Divider />
+                <Menu.Item
+                  onPress={() => {
+                    setIntakeTime('Afternoon');
+                    setTimeMenuVisible(false);
+                  }}
+                  title="Afternoon"
+                />
+                <Divider />
+                <Menu.Item
+                  onPress={() => {
+                    setIntakeTime('Evening');
+                    setTimeMenuVisible(false);
+                  }}
+                  title="Evening"
+                />
+              </Menu>
+
+              <TextInput
+                label="Frequency (days)"
+                value={frequency}
+                onChangeText={(text) => setFrequency(text)}
+                mode="outlined"
+                style={styles.input}
+                placeholder="Enter frequency (e.g., 7)"
+                keyboardType="numeric"
               />
-              <Divider />
-              <Menu.Item
-                onPress={() => {
-                  setIntakeTime('Evening');
-                  setTimeMenuVisible(false);
-                }}
-                title="Evening"
-              />
-            </Menu>
 
-
-            <TextInput
-              label="Frequency (days)"
-              value={frequency}
-              onChangeText={(text) => setFrequency(text)}
-              mode="outlined"
-              style={styles.input}
-              placeholder="Enter frequency (e.g., 7)"
-              keyboardType="keyboard"
-            />
-
-            <Button
-              mode="contained"
-              onPress={handleSave}
-              style={styles.button}
-              labelStyle={styles.buttonLabel}
-            >
-              Save Medication
-            </Button>
-          </Card.Content>
-        </Card>
-      </View>
+              <Button
+                mode="contained"
+                onPress={handleSave}
+                style={styles.button}
+                labelStyle={styles.buttonLabel}
+              >
+                Save Medication
+              </Button>
+            </Card.Content>
+          </Card>
+        </View>
+      </TouchableWithoutFeedback>
     </Provider>
   );
 }
