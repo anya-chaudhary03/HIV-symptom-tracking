@@ -3,10 +3,6 @@ import { View, StyleSheet, Text, TextInput, TouchableOpacity, Alert } from 'reac
 import { fb_auth } from '../firebaseConfig';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { useRouter } from 'expo-router';
-import { LogBox } from 'react-native';
-
-
-//LogBox.ignoreAllLogs();
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');

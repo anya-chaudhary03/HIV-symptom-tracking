@@ -65,9 +65,9 @@ const filterLogsByRange = (logs, range) => {
   let startDate = new Date(now);
 
   if (range === 'week') {
-    startDate.setDate(now.getDate() - 7);
+    startDate.setDate(now.getDate());
   } else if (range === 'month') {
-    startDate.setMonth(now.getMonth() - 1);
+    startDate.setMonth(now.getMonth() - 2);
   } else if (range === '3months') {
     startDate.setMonth(now.getMonth() - 3);
   }
@@ -86,15 +86,14 @@ const SymptomChart = ({ symptom, logs }) => {
     const formattedDate = log.date;
     const value =
       symptom.type === 'Severity'
-        ? ['Low', 'Moderate', 'High'].indexOf(log.value) + 1
-        : parseInt(log.value, 10);
+        ? ['Mild', 'Moderate', 'Severe'].indexOf(log.value) // Map severity to 0, 1, 2
+        : parseFloat(log.value);
 
     if (acc[formattedDate]) {
       acc[formattedDate].push(value);
     } else {
       acc[formattedDate] = [value];
     }
-
     return acc;
   }, {});
 
@@ -103,7 +102,13 @@ const SymptomChart = ({ symptom, logs }) => {
   const values = sortedDates.map((date) => {
     const dateValues = aggregatedData[date];
     return dateValues.reduce((sum, val) => sum + val, 0) / dateValues.length;
+
+
+    
   });
+
+  const isSeverityType = symptom.type === 'Severity';
+  const yAxisLabels = isSeverityType ? ['Low', 'Medium', 'High'] : null;
 
   return (
     <LineChart
@@ -114,8 +119,9 @@ const SymptomChart = ({ symptom, logs }) => {
       width={Dimensions.get('window').width - 20}
       height={220}
       yAxisLabel={''}
-      yAxisSuffix={symptom.type === 'Daily Count' ? '' : ''}
-      yAxisInterval={1}
+      yAxisSuffix={''}
+      //yAxisInterval={1}
+      fromZero={true}
       chartConfig={{
         backgroundColor: '#007BFF',
         backgroundGradientFrom: '#0056b3',
@@ -129,7 +135,6 @@ const SymptomChart = ({ symptom, logs }) => {
           stroke: '#ffffff',
         },
       }}
-      fromZero={true}
       style={{
         marginVertical: 10,
         borderRadius: 16,

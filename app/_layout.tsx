@@ -13,6 +13,7 @@ import { config } from '@gluestack-ui/config';
 import { router } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
+
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
@@ -62,7 +63,7 @@ function RootLayoutNav() {
                   onPress={() => router.push('/calendar')}
                   style={{ marginRight: 15 }}
                 >
-                  <FontAwesome name="calendar" size={24} color="blue" />
+                  <FontAwesome name="calendar" size={24} color="#837f94" />
                 </TouchableOpacity>
               </View>
             ),

@@ -1,24 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, FlatList, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, FlatList, ActivityIndicator, Alert } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { fb_db, fb_auth } from '../../firebaseConfig';
 import { collection, query, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
-import { MaterialIcons } from '@expo/vector-icons';
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
+import { Card, Button, Text, useTheme } from 'react-native-paper';
+import SymptomCard from '../SymptomCard';
+import MedicationCard from '../MedicationCard';
 
 export default IndexPage;
 
 export function IndexPage() {
-  
-
-  return  <IndexElement />
-  
+  return <IndexElement />;
 }
 
 export function IndexElement() {
   const { selectedDate } = useLocalSearchParams();
   const [symptoms, setSymptoms] = useState([]);
+  const [medications, setMedications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { colors } = useTheme();
 
   const formatDate = (date) => {
     const d = new Date(date);
@@ -27,7 +28,7 @@ export function IndexElement() {
 
   const currentDate = selectedDate || formatDate(new Date());
 
-  const fetchSymptoms = async () => {
+  const fetchData = async () => {
     setLoading(true);
     try {
       const user = fb_auth.currentUser;
@@ -35,6 +36,7 @@ export function IndexElement() {
         console.error('No logged-in user found');
         return;
       }
+
       const logsRef = collection(fb_db, 'Log');
       const q = query(
         logsRef,
@@ -42,32 +44,48 @@ export function IndexElement() {
         where('date', '==', currentDate)
       );
       const querySnapshot = await getDocs(q);
-
       const logsData = querySnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       }));
 
-      return logsData
+      const medicationsRef = collection(fb_db, 'Medications');
+      const medicationsQuery = query(
+        medicationsRef,
+        where('userId', '==', user.uid)
+      );
+      const medicationsSnapshot = await getDocs(medicationsQuery);
+      const medicationsData = medicationsSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      const filteredMedications = medicationsData.filter((medication) => {
+        const startDate = new Date(medication.date);
+        const daysDiff = Math.floor((new Date(currentDate) - startDate) / (1000 * 60 * 60 * 24));
+        console.log(daysDiff)
+        return daysDiff % medication.frequency !== 0;
+      });
+
+      return { logsData, filteredMedications };
     } catch (error) {
-      console.error('Error fetching logs:', error);
-      Alert.alert('Error', 'Failed to fetch symptoms. Please try again later.');
+      console.error('Error fetching data:', error);
+      Alert.alert('Error', 'Failed to fetch data. Please try again later.');
     } finally {
       setLoading(false);
     }
-  }
+  };
 
-  const {data,isPending,error} = useQuery({
-    queryKey: ["symptoms",selectedDate],
-    queryFn: () => {
-      return fetchSymptoms()
-    },
+  const { data, isPending, error, refetch } = useQuery({
+    queryKey: ["data", selectedDate],
+    queryFn: fetchData,
     refetchOnMount: true,
   });
 
   useEffect(() => {
-    if(data) {
-      setSymptoms(data);
+    if (data) {
+      setSymptoms(data.logsData);
+      setMedications(data.filteredMedications);
     }
   }, [data]);
 
@@ -95,56 +113,37 @@ export function IndexElement() {
     ]);
   };
 
-  const renderDailyScale = (value) => {
-    const max = 10;
-    return (
-      <View style={styles.scaleContainer}>
-        {Array.from({ length: max }).map((_, index) => (
-          <View
-            key={index}
-            style={[
-              styles.scaleDot,
-              index < value ? styles.filledDot : styles.emptyDot,
-            ]}
-          />
-        ))}
-      </View>
-    );
-  };
-
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>
+      <Text variant="headlineMedium" style={styles.header}>
         {selectedDate ? `Records for ${selectedDate}` : `Today's Records: ${currentDate}`}
       </Text>
 
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007BFF" />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text>Loading records...</Text>
         </View>
-      ) : symptoms.length > 0 ? (
-        <FlatList
-          data={symptoms}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <View style={styles.card}>
-              <View style={styles.cardContent}>
-                <Text style={styles.symptomName}>{item.symptom}</Text>
-                {item.type === 'Severity' ? (
-                  renderDailyScale(parseInt(item.value, 10))
-                ) : (
-                  <Text style={styles.symptomValue}>{item.value} {item.unit}</Text>
-                )}
-              </View>
-              <TouchableOpacity onPress={() => deleteSymptom(item.id)} style={styles.deleteButton}>
-                <MaterialIcons name="delete" size={22} color="white" />
-              </TouchableOpacity>
-            </View>
-          )}
-        />
       ) : (
-        <Text style={styles.noDataText}>No records found for this date.</Text>
+        <>
+          {symptoms.length > 0 || medications.length > 0 ? (
+            <FlatList
+              data={[...symptoms, ...medications]}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => {
+                if (item.symptom) {
+                  return <SymptomCard item={item} onDelete={deleteSymptom} />;
+                } else {
+                  return <MedicationCard item={item} />;
+                }
+              }}
+            />
+          ) : (
+            <Text variant="bodyLarge" style={styles.noDataText}>
+              No records found for this date.
+            </Text>
+          )}
+        </>
       )}
     </View>
   );
@@ -153,73 +152,15 @@ export function IndexElement() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    padding: 16,
     backgroundColor: '#F8F9FA',
   },
   header: {
-    fontSize: 22,
-    fontWeight: 'bold',
     marginBottom: 20,
     textAlign: 'center',
-    color: '#2E3A59',
-  },
-  card: {
-    backgroundColor: '#FFFFFF',
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  cardContent: {
-    flexDirection: 'column',
-  },
-  symptomName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2E3A59',
-  },
-  symptomValue: {
-    fontSize: 16,
-    color: '#007BFF',
-    fontWeight: '600',
-    marginTop: 3,
-  },
-  deleteButton: {
-    backgroundColor: '#FF5252',
-    padding: 8,
-    borderRadius: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: 35,
-    height: 35,
-  },
-  scaleContainer: {
-    flexDirection: 'row',
-    marginTop: 5,
-  },
-  scaleDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: 5,
-  },
-  filledDot: {
-    backgroundColor: '#007BFF',
-  },
-  emptyDot: {
-    backgroundColor: '#D0D3D4',
   },
   noDataText: {
-    fontSize: 18,
     textAlign: 'center',
-    color: '#6C757D',
     marginTop: 20,
   },
   loadingContainer: {
@@ -228,4 +169,3 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 });
-

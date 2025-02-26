@@ -1,111 +1,160 @@
 import React, { useState } from 'react';
-import { Box, Input, Button, Text, Select, SelectTrigger, SelectContent, SelectItem, SelectInput, SelectPortal, SelectBackdrop, SelectDragIndicatorWrapper, SelectDragIndicator, InputField } from '@gluestack-ui/themed';
+import { View, StyleSheet, Alert } from 'react-native';
+import { TextInput, Button, Text, Card, Menu, Divider, Provider, DefaultTheme } from 'react-native-paper';
 import { collection, addDoc } from 'firebase/firestore';
-import { fb_db, fb_auth } from '../firebaseConfig'; 
+import { fb_db, fb_auth } from '../firebaseConfig';
 import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 
+const theme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    primary: '#007BFF', 
+    accent: '#007BFF',  
+  },
+};
+
 export default function AddSymptomScreen() {
   const [name, setName] = useState('');
-  const [type, setType] = useState(''); 
+  const [type, setType] = useState('');
+  const [visible, setVisible] = useState(false); 
   const router = useRouter();
   const queryClient = useQueryClient();
 
   const handleSave = async () => {
     if (!name || !type) {
-      alert('Please fill out all fields!');
+      Alert.alert('Please fill out all fields!');
       return;
     }
 
     try {
-      const user = fb_auth.currentUser; 
+      const user = fb_auth.currentUser;
       if (!user) {
-        alert('You must be logged in to add a symptom!');
+        Alert.alert('You must be logged in to add a symptom!');
         return;
       }
 
       const newSymptom = {
         name,
         type,
-        userId: user.uid, 
+        userId: user.uid,
       };
 
-      const symptomsRef = collection(fb_db, 'Symptoms'); 
+      const symptomsRef = collection(fb_db, 'Symptoms');
       await addDoc(symptomsRef, newSymptom);
 
-      alert('Symptom added successfully!');
-      queryClient.invalidateQueries({queryKey: ["stored_symptoms"]});
-      router.back(); 
+      Alert.alert('Success', 'Symptom added successfully!');
+      queryClient.invalidateQueries({ queryKey: ['stored_symptoms'] });
+      router.back();
     } catch (error) {
-      console.error('Error adding symptom:', error);
-      alert('An error occurred while adding the symptom. Please try again.');
+      console.error('Error', 'Error adding symptom:', error);
+      Alert.alert('Error', 'An error occurred while adding the symptom. Please try again.');
     }
   };
 
   return (
-    <Box flex={1} bg="$gray100" px={5} py={10} justifyContent="center">
-      <Text size="3xl" fontWeight="bold" mb={8} textAlign="center" color="$primary">
-        Add a New Symptom
-      </Text>
-      <Box mb={5}>
-        <Text size="lg" fontWeight="semibold" mb={2} color="$gray700">
-          Symptom Name
-        </Text>
-        <Input size="lg" variant="outline" isInvalid={false} isDisabled={false}>
-          <InputField
-            onChange={(e: any) => setName(e.nativeEvent.text)}
-            value={name}
-            placeholder="Enter symptom name"
-            style={{
-              backgroundColor: '#fff',
-              borderRadius: 10,
-              padding: 10,
-              fontSize: 16,
-            }}
-          />
-        </Input>
-      </Box>
+    <Provider theme={theme}>
+      <View style={styles.container}>
+        <Card style={styles.card}>
+          <Card.Content>
+            <Text variant="headlineMedium" style={styles.title}>
+              Add a New Symptom
+            </Text>
 
-      <Box mb={8}>
-        <Text size="lg" fontWeight="semibold" mb={2} color="$gray700">
-          Symptom Type
-        </Text>
-        <Select
-          isInvalid={false}
-          isDisabled={false}
-          onValueChange={(value) => setType(value)}
-        >
-          <SelectTrigger>
-            <SelectInput placeholder="Select type" />
-          </SelectTrigger>
-          <SelectPortal>
-            <SelectBackdrop />
-            <SelectContent>
-              <SelectDragIndicatorWrapper>
-                <SelectDragIndicator />
-              </SelectDragIndicatorWrapper>
-              <SelectItem label="Severity e.g., Low, Medium, High" value="Severity" />
-              <SelectItem label="Daily Scale e.g., 1-10" value="Daily Scale" />
-              <SelectItem label="Daily Count e.g., 3" value="Daily Count" />
-            </SelectContent>
-          </SelectPortal>
-        </Select>
-      </Box>
+            <TextInput
+              label="Symptom Name"
+              value={name}
+              onChangeText={(text) => setName(text)}
+              mode="outlined"
+              style={styles.input}
+              placeholder="Enter symptom name"
+            />
 
-      <Box alignItems="center">
-        <Button
-          bg="$primary"
-          borderRadius="full"
-          paddingX={6}
-          paddingY={4}
-          onPress={handleSave}
-          shadow="md"
-        >
-          <Text color="$white" fontWeight="semibold" size="lg">
-            Save Symptom
-          </Text>
-        </Button>
-      </Box>
-    </Box>
+            <Menu
+              visible={visible}
+              onDismiss={() => setVisible(false)}
+              anchor={
+                <Button
+                  mode="outlined"
+                  onPress={() => setVisible(true)}
+                  style={styles.dropdownButton}
+                >
+                  {type || 'Select Symptom Type'}
+                </Button>
+              }
+            >
+              <Menu.Item
+                onPress={() => {
+                  setType('Severity');
+                  setVisible(false);
+                }}
+                title="Severity e.g., Low, Medium, High"
+              />
+              <Divider />
+              <Menu.Item
+                onPress={() => {
+                  setType('Daily Scale');
+                  setVisible(false);
+                }}
+                title="Daily Scale e.g., 1-10"
+              />
+              <Divider />
+              <Menu.Item
+                onPress={() => {
+                  setType('Daily Count');
+                  setVisible(false);
+                }}
+                title="Daily Count e.g., 3"
+              />
+            </Menu>
+
+            <Button
+              mode="contained"
+              onPress={handleSave}
+              style={styles.button}
+              labelStyle={styles.buttonLabel}
+            >
+              Save Symptom
+            </Button>
+          </Card.Content>
+        </Card>
+      </View>
+    </Provider>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: 16,
+    backgroundColor: '#f5f5f5',
+  },
+  card: {
+    padding: 16,
+    borderRadius: 8,
+    elevation: 4,
+  },
+  title: {
+    marginBottom: 16,
+    textAlign: 'center',
+    color: '#007BFF',
+  },
+  input: {
+    marginBottom: 16,
+    backgroundColor: '#fff',
+  },
+  dropdownButton: {
+    marginBottom: 16,
+    justifyContent: 'flex-start',
+  },
+  button: {
+    marginTop: 16,
+    backgroundColor: '#007BFF', 
+  },
+  buttonLabel: {
+    color: '#fff',
+    fontSize: 16,
+  },
+});

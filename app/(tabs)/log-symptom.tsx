@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
+import { View, StyleSheet, Alert } from 'react-native';
+import { Button, TextInput, Text, Card, ActivityIndicator } from 'react-native-paper';
 import RNPickerSelect from 'react-native-picker-select';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { fb_db, fb_auth } from '../../firebaseConfig';
@@ -14,24 +15,24 @@ export default function LogSymptomScreen() {
   const [showPicker, setShowPicker] = useState(false);
   const [symptoms, setSymptoms] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const queryClient = useQueryClient();
 
   useEffect(() => {
     const fetchSymptoms = async () => {
       try {
-        const user = fb_auth.currentUser; 
+        const user = fb_auth.currentUser;
         if (!user) {
           console.error('No logged-in user found');
           return;
         }
 
-        const symptomsRef = collection(fb_db, 'Symptoms'); 
-        const q = query(symptomsRef, where('userId', '==', user.uid)); 
-        console.log(user.uid)
+        const symptomsRef = collection(fb_db, 'Symptoms');
+        const q = query(symptomsRef, where('userId', '==', user.uid));
         const querySnapshot = await getDocs(q);
 
         const symptomsData = querySnapshot.docs.map((doc) => ({
-          id: doc.id, 
+          id: doc.id,
           ...doc.data(),
         }));
 
@@ -46,8 +47,6 @@ export default function LogSymptomScreen() {
     fetchSymptoms();
   }, []);
 
-
-
   const handleDateChange = (event, date) => {
     setShowPicker(false);
     if (date) {
@@ -59,19 +58,20 @@ export default function LogSymptomScreen() {
     const symptom = symptoms.find((s) => s.name === value);
     setSelectedSymptom(value);
     setSelectedSymptomType(symptom?.type || null);
-    setSelectedValue(null); 
+    setSelectedValue(null);
   };
 
   const handleSubmit = async () => {
     if (!selectedDate || !selectedSymptom || !selectedValue) {
-      alert('Please fill out all fields!');
+      Alert.alert('Please fill out all fields!');
       return;
     }
 
+    setIsSaving(true); 
     try {
       const user = fb_auth.currentUser;
       if (!user) {
-        alert('You must be logged in to log a symptom!');
+        Alert.alert('Error', 'You must be logged in to log a symptom!');
         return;
       }
 
@@ -82,88 +82,94 @@ export default function LogSymptomScreen() {
         userId: user.uid,
       };
 
-      const logsRef = collection(fb_db, 'Log'); 
+      const logsRef = collection(fb_db, 'Log');
       await addDoc(logsRef, logData);
 
-      alert('Symptom logged successfully!');
-      queryClient.invalidateQueries({queryKey: ["symptoms"]});
+      Alert.alert('Success', 'Symptom logged successfully!');
+      queryClient.invalidateQueries({ queryKey: ['data'] });
     } catch (error) {
       console.error('Error logging symptom:', error);
-      alert('An error occurred while logging the symptom. Please try again.');
+      Alert.alert('Error', 'An error occurred while logging the symptom. Please try again.');
+    } finally {
+      setIsSaving(false); 
     }
-
-    
   };
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Log Symptom</Text>
+      <Card style={styles.card}>
+        <Card.Content>
+          <Text style={styles.title}>Log Symptom</Text>
 
-      <Text style={styles.label}>Select Date:</Text>
-      <DateTimePicker
-        value={selectedDate}
-        mode="date"
-        onChange={handleDateChange}
-      />
+          <Text style={styles.label}>Select Date:</Text>
+          <DateTimePicker
+            value={selectedDate}
+            mode="date"
+            onChange={handleDateChange}
+          />
 
-      <Text style={styles.label}>Symptom:</Text>
-      <RNPickerSelect
-        onValueChange={handleSymptomChange}
-        items={symptoms.map((symptom) => ({ label: symptom.name, value: symptom.name}))}
-        placeholder={{ label: 'Select a symptom', value: null }}
-        style={pickerSelectStyles}
-      />
-      {selectedSymptomType && (
-        <>
-          <Text style={styles.label}>Value:</Text>
-          {selectedSymptomType === 'Daily Scale' && (
-            <RNPickerSelect
-              onValueChange={(value) => setSelectedValue(value)}
-              items={Array.from({ length: 10 }, (_, i) => ({
-                label: `${i + 1}`,
-                value: i + 1,
-              }))}
-              placeholder={{ label: 'Select a value', value: null }}
-              style={pickerSelectStyles}
-            />
+          <Text style={styles.label}>Symptom:</Text>
+          <RNPickerSelect
+            onValueChange={handleSymptomChange}
+            items={symptoms.map((symptom) => ({ label: symptom.name, value: symptom.name }))}
+            placeholder={{ label: 'Select a symptom', value: null }}
+            style={pickerSelectStyles}
+          />
+
+          {selectedSymptomType && (
+            <>
+              <Text style={styles.label}>Value:</Text>
+              {selectedSymptomType === 'Daily Scale' && (
+                <RNPickerSelect
+                  onValueChange={(value) => setSelectedValue(value)}
+                  items={Array.from({ length: 10 }, (_, i) => ({
+                    label: `${i + 1}`,
+                    value: i + 1,
+                  }))}
+                  placeholder={{ label: 'Select a value', value: null }}
+                  style={pickerSelectStyles}
+                />
+              )}
+
+              {selectedSymptomType === 'Severity' && (
+                <View style={styles.severityScale}>
+                  {['Mild', 'Moderate', 'Severe'].map((level) => (
+                    <Button
+                      key={level}
+                      mode={selectedValue === level ? 'contained' : 'outlined'}
+                      onPress={() => setSelectedValue(level)}
+                      style={styles.severityButton}
+                    >
+                      {level}
+                    </Button>
+                  ))}
+                </View>
+              )}
+
+              {selectedSymptomType === 'Daily Count' && (
+                <TextInput
+                  label="Enter a number"
+                  mode="outlined"
+                  value={selectedValue}
+                  onChangeText={(text) => setSelectedValue(text)}
+                  keyboardType="numeric"
+                  style={styles.input}
+                />
+              )}
+            </>
           )}
 
-          {selectedSymptomType === 'Severity' && (
-            <View style={styles.severityScale}>
-              {['Mild', 'Moderate', 'Severe'].map((level) => (
-                <TouchableOpacity
-                  key={level}
-                  style={[
-                    styles.severityButton,
-                    selectedValue === level && styles.selectedSeverityButton,
-                  ]}
-                  onPress={() => setSelectedValue(level)}
-                >
-                  <Text
-                    style={[
-                      styles.severityButtonText,
-                      selectedValue === level && styles.selectedSeverityButtonText,
-                    ]}
-                  >
-                    {level}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
+          <Button mode="contained" onPress={handleSubmit} style={styles.button} disabled={isSaving}>
+            Submit
+          </Button>
+        </Card.Content>
+      </Card>
 
-          {selectedSymptomType === 'Daily Count' && (
-            <TextInput
-              style={styles.input}
-              placeholder="Enter a number"
-              value={selectedValue}
-              onChangeText={(text) => setSelectedValue(text)}
-            />
-          )}
-        </>
+      {isSaving && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator animating={true} size="large" color="#fff" />
+        </View>
       )}
-      <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-        <Text style={styles.buttonText}>Submit</Text>
-      </TouchableOpacity>
     </View>
   );
 }
@@ -174,6 +180,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 20,
     backgroundColor: '#F4F5F7',
+    position: 'relative',
+  },
+  card: {
+    borderRadius: 10,
+    elevation: 3,
   },
   title: {
     fontSize: 24,
@@ -188,49 +199,31 @@ const styles = StyleSheet.create({
     marginVertical: 10,
     color: '#2E3A59',
   },
-  severityScale: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  severityButton: {
-    flex: 1,
-    paddingVertical: 10,
-    marginHorizontal: 5,
-    backgroundColor: '#E8E8E8',
-    borderRadius: 5,
-    alignItems: 'center',
-  },
-  selectedSeverityButton: {
-    backgroundColor: '#838383',
-  },
-  severityButtonText: {
-    color: '#2E3A59',
-    fontSize: 14,
-  },
-  selectedSeverityButtonText: {
-    color: '#FFF',
-    fontWeight: 'bold',
-  },
   input: {
-    borderWidth: 1,
-    borderColor: '#DADADA',
-    borderRadius: 8,
-    backgroundColor: '#fff',
-    padding: 10,
     marginBottom: 15,
-    fontSize: 16,
   },
   button: {
+    marginTop: 20,
     backgroundColor: '#007BFF',
-    padding: 15,
-    borderRadius: 5,
-    alignItems: 'center',
   },
-  buttonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  severityScale: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 15,
+  },
+  severityButton: {
+    marginHorizontal: 5,
   },
 });
 
