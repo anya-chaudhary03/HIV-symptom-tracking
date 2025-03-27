@@ -5,7 +5,7 @@ import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'fire
 import { useRouter } from 'expo-router';
 import { LogBox } from 'react-native';
 
-//LogBox.ignoreAllLogs();
+LogBox.ignoreAllLogs();
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');

@@ -24,21 +24,16 @@ export default function ChangePasswordPage() {
 
     try {
       const user = fb_auth.currentUser;
-
-      if (!user) {
-        Alert.alert('Error', 'No user is logged in.');
-        setLoading(false);
-        return;
-      }
-
       const credential = EmailAuthProvider.credential(user.email, currentPassword);
       await reauthenticateWithCredential(user, credential);
       await updatePassword(user, newPassword);
       Alert.alert('Success', 'Password has been updated.');
-    } catch (error) {
+    } 
+    catch (error) {
       console.error('Error changing password:', error);
       Alert.alert('Error', error.message || 'Failed to change password.');
-    } finally {
+    } 
+    finally {
       setLoading(false);
     }
   };

@@ -65,11 +65,13 @@ const filterLogsByRange = (logs, range) => {
   let startDate = new Date(now);
 
   if (range === 'week') {
-    startDate.setDate(now.getDate());
+    startDate.setDate(now.getDate() - 7);
+    //console.log(startDate)
   } else if (range === 'month') {
-    startDate.setMonth(now.getMonth() - 2);
+    //startDate.setMonth(2);
+    startDate = new Date('2025-02-01T00:00:00.000Z');
   } else if (range === '3months') {
-    startDate.setMonth(now.getMonth() - 3);
+    startDate.setMonth(12);
   }
 
   return logs.filter((log) => new Date(log.date) >= startDate);
@@ -102,9 +104,6 @@ const SymptomChart = ({ symptom, logs }) => {
   const values = sortedDates.map((date) => {
     const dateValues = aggregatedData[date];
     return dateValues.reduce((sum, val) => sum + val, 0) / dateValues.length;
-
-
-    
   });
 
   const isSeverityType = symptom.type === 'Severity';
